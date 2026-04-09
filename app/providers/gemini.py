@@ -10,11 +10,16 @@ from app.utils.retry import TransientError, transient_retry
 class GeminiAdapter(LLMAdapter):
     def __init__(self, model: str = "gemini-2.0-flash"):
         self.model = model
+        self._client = None
+        self._genai = None
 
-    def _get_client(self):
-        import google.generativeai as genai  # lazy import
-        genai.configure(api_key=settings.google_api_key)
-        return genai.GenerativeModel(model_name=self.model), genai
+    def _ensure_client(self):
+        """Lazy-init: import SDK and configure once, then cache the client."""
+        if self._client is None:
+            import google.generativeai as genai  # lazy import — avoids cffi issues at module load
+            genai.configure(api_key=settings.google_api_key)
+            self._genai = genai
+            self._client = genai.GenerativeModel(model_name=self.model)
 
     @transient_retry(max_attempts=3)
     async def generate(
@@ -24,17 +29,16 @@ class GeminiAdapter(LLMAdapter):
         temperature: float = 0.2,
         max_tokens: int = 4096,
     ) -> tuple[str, ModelTrace]:
-        import google.generativeai as genai  # lazy import
-        client, genai = self._get_client()
+        self._ensure_client()
 
         start = time.monotonic()
         prompt = f"{system}\n\n{user}"
-        config = genai.types.GenerationConfig(
+        config = self._genai.types.GenerationConfig(
             temperature=temperature,
             max_output_tokens=max_tokens,
         )
         try:
-            resp = await client.generate_content_async(prompt, generation_config=config)
+            resp = await self._client.generate_content_async(prompt, generation_config=config)
         except Exception as exc:
             err = str(exc).lower()
             if "quota" in err or "rate" in err or "503" in err or "500" in err:

@@ -48,13 +48,13 @@ def _trace(state: MerlinState, node: str, model: str, tokens_in: int, tokens_out
 
 
 def _extract_json(text: str) -> dict:
-    """Extract first JSON object from text."""
+    """Extract first JSON object from text. Logs a debug warning on parse failure."""
     match = re.search(r"\{.*\}", text, re.DOTALL)
     if match:
         try:
             return json.loads(match.group())
-        except json.JSONDecodeError:
-            pass
+        except json.JSONDecodeError as exc:
+            logger.debug("JSON parse failed in LLM output", error=str(exc), snippet=text[:200])
     return {}
 
 
@@ -294,30 +294,49 @@ async def builder_node(state: MerlinState) -> dict:
         max_tokens=8192,
     )
 
-    # Extract artifacts from markdown code blocks
+    # Extract artifacts from markdown code blocks.
+    # Primary strategy: look for "### Artifact: <path>" immediately before a fenced block.
+    # Fallback: pair remaining fenced blocks with generated names.
     artifacts = list(state.artifacts)
-    path_pattern = re.compile(r"### Artifact:\s*(.+)")
-    block_pattern = re.compile(r"```(\w+)?\n(.*?)```", re.DOTALL)
+    paired_pattern = re.compile(
+        r"###\s+Artifact:\s*(.+?)\n```(\w+)?\n(.*?)```",
+        re.DOTALL | re.IGNORECASE,
+    )
+    orphan_pattern = re.compile(r"```(\w+)?\n(.*?)```", re.DOTALL)
 
-    paths = path_pattern.findall(text)
-    blocks = block_pattern.findall(text)
-
-    for i, (lang, content) in enumerate(blocks):
-        path = paths[i].strip() if i < len(paths) else f"artifact_{i}.txt"
-        ext = lang.lower() if lang else ""
+    paired_spans: set[int] = set()
+    for m in paired_pattern.finditer(text):
+        path = m.group(1).strip()
+        lang = (m.group(2) or "").lower()
+        content = m.group(3).strip()
+        ext = lang
         artifact_type = (
             "test" if "test" in path.lower() else
             "config" if ext in ("yaml", "toml", "json", "env") else
             "doc" if ext in ("md", "rst", "txt") else
             "code"
         )
-        artifacts.append(
-            ArtifactItem(
-                path=path,
-                content=content.strip(),
-                artifact_type=artifact_type,
-            )
+        artifacts.append(ArtifactItem(path=path, content=content, artifact_type=artifact_type))
+        paired_spans.update(range(m.start(), m.end()))
+
+    # Capture any fenced blocks not already covered by a paired match
+    fallback_index = 0
+    for m in orphan_pattern.finditer(text):
+        if m.start() in paired_spans:
+            continue
+        lang = (m.group(1) or "").lower()
+        content = m.group(2).strip()
+        if not content:
+            continue
+        ext = lang
+        path = f"artifact_{fallback_index}.{ext or 'txt'}"
+        artifact_type = (
+            "config" if ext in ("yaml", "toml", "json", "env") else
+            "doc" if ext in ("md", "rst", "txt") else
+            "code"
         )
+        artifacts.append(ArtifactItem(path=path, content=content, artifact_type=artifact_type))
+        fallback_index += 1
 
     return {
         "artifacts": artifacts,

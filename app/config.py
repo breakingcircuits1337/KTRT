@@ -44,6 +44,11 @@ class Settings(BaseSettings):
     max_debug_rounds: int = Field(default=3, alias="MAX_DEBUG_ROUNDS")
     default_mode: str = Field(default="research", alias="DEFAULT_MODE")
 
+    # ── CORS ─────────────────────────────────────────────────
+    # Comma-separated list of allowed origins, e.g. "https://app.example.com,https://gpt.example.com"
+    # Defaults to "*" (all origins). Restrict this in production.
+    cors_origins: str = Field(default="*", alias="CORS_ORIGINS")
+
     # ── Observability ────────────────────────────────────────
     log_level: str = Field(default="INFO", alias="LOG_LEVEL")
     log_format: str = Field(default="json", alias="LOG_FORMAT")
