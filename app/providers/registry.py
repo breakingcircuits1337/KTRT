@@ -6,30 +6,35 @@ if TYPE_CHECKING:
     from app.providers.base import LLMAdapter
 
 # Default role → (module_path, class_name, model_name)
-# Azure AI Foundry is the primary provider. Other providers remain available via
-# per-request overrides using the model aliases below.
+# Azure AI Foundry is the primary provider. Deployment names must match what you
+# configured in your Azure AI Foundry project. Other providers remain available
+# as per-request overrides via the model aliases below.
 _DEFAULTS: dict[str, tuple[str, str, str | None]] = {
-    # Fast research/retrieval — GPT-4o balances speed and quality
-    "researcher": ("app.providers.azure_openai", "AzureOpenAIAdapter", "gpt-4o"),
-    # Deep synthesis — GPT-4.1 flagship for highest-quality outputs
-    "evidence": ("app.providers.azure_openai", "AzureOpenAIAdapter", "gpt-4.1"),
-    "planner": ("app.providers.azure_openai", "AzureOpenAIAdapter", "gpt-4.1"),
-    # Critique pass — GPT-4o is fast enough and sharp enough for adversarial review
-    "critic": ("app.providers.azure_openai", "AzureOpenAIAdapter", "gpt-4o"),
-    # Final verdict — GPT-4.1 for authoritative evaluation
-    "judge": ("app.providers.azure_openai", "AzureOpenAIAdapter", "gpt-4.1"),
-    # Code generation — GPT-4.1 for best correctness
-    "builder": ("app.providers.azure_openai", "AzureOpenAIAdapter", "gpt-4.1"),
-    # Debugging — GPT-4.1 with strong code reasoning
-    "debugger": ("app.providers.azure_openai", "AzureOpenAIAdapter", "gpt-4.1"),
+    # Fast factual retrieval — DeepSeek V3.2 is fast and strong at research synthesis
+    "researcher": ("app.providers.azure_openai", "AzureOpenAIAdapter", "deepseek-v3.2"),
+    # Evidence weighing — Kimi-K2 Thinking's extended reasoning excels here
+    "evidence": ("app.providers.azure_openai", "AzureOpenAIAdapter", "kimi-k2-thinking"),
+    # Strategic planning — GPT-5.4 Pro flagship for complex multi-step reasoning
+    "planner": ("app.providers.azure_openai", "AzureOpenAIAdapter", "gpt-5.4-pro"),
+    # Adversarial critique — DeepSeek V3.2-Speciale tuned for deep critical analysis
+    "critic": ("app.providers.azure_openai", "AzureOpenAIAdapter", "deepseek-v3.2-speciale"),
+    # Final verdict — GPT-5.4 Pro for authoritative evaluation
+    "judge": ("app.providers.azure_openai", "AzureOpenAIAdapter", "gpt-5.4-pro"),
+    # Code generation — GPT-5.1 Codex Max, purpose-built for code
+    "builder": ("app.providers.azure_openai", "AzureOpenAIAdapter", "gpt-5.1-codex-max"),
+    # Debugging — GPT-5.1 Codex Max, code-native model
+    "debugger": ("app.providers.azure_openai", "AzureOpenAIAdapter", "gpt-5.1-codex-max"),
 }
 
 _MODEL_ALIASES: dict[str, tuple[str, str, str | None]] = {
-    # ── Azure (primary) ──────────────────────────────────────────
-    "azure:gpt-4.1": ("app.providers.azure_openai", "AzureOpenAIAdapter", "gpt-4.1"),
-    "azure:gpt-4.1-mini": ("app.providers.azure_openai", "AzureOpenAIAdapter", "gpt-4.1-mini"),
-    "azure:gpt-4o": ("app.providers.azure_openai", "AzureOpenAIAdapter", "gpt-4o"),
-    "azure:gpt-4o-mini": ("app.providers.azure_openai", "AzureOpenAIAdapter", "gpt-4o-mini"),
+    # ── Azure AI Foundry — your deployed models ──────────────────
+    "azure:gpt-5.4-pro": ("app.providers.azure_openai", "AzureOpenAIAdapter", "gpt-5.4-pro"),
+    "azure:gpt-5.4": ("app.providers.azure_openai", "AzureOpenAIAdapter", "gpt-5.4"),
+    "azure:gpt-5.1-codex-max": ("app.providers.azure_openai", "AzureOpenAIAdapter", "gpt-5.1-codex-max"),
+    "azure:deepseek-v3.2": ("app.providers.azure_openai", "AzureOpenAIAdapter", "deepseek-v3.2"),
+    "azure:deepseek-v3.2-speciale": ("app.providers.azure_openai", "AzureOpenAIAdapter", "deepseek-v3.2-speciale"),
+    "azure:mistral-large-3": ("app.providers.azure_openai", "AzureOpenAIAdapter", "mistral-large-3"),
+    "azure:kimi-k2-thinking": ("app.providers.azure_openai", "AzureOpenAIAdapter", "kimi-k2-thinking"),
     # ── Anthropic (fallback / override) ──────────────────────────
     "claude-sonnet-4-6": ("app.providers.anthropic", "AnthropicAdapter", "claude-sonnet-4-6"),
     "claude-opus-4-6": ("app.providers.anthropic", "AnthropicAdapter", "claude-opus-4-6"),
@@ -39,7 +44,7 @@ _MODEL_ALIASES: dict[str, tuple[str, str, str | None]] = {
     "gemini-1.5-pro": ("app.providers.gemini", "GeminiAdapter", "gemini-1.5-pro"),
     # ── Groq (fallback / override) ───────────────────────────────
     "groq:llama-3.3-70b": ("app.providers.groq", "GroqAdapter", "llama-3.3-70b-versatile"),
-    # ── Mistral (fallback / override) ────────────────────────────
+    # ── Mistral direct API (fallback / override) ─────────────────
     "mistral-large-latest": ("app.providers.mistral", "MistralAdapter", "mistral-large-latest"),
     "mistral-small-latest": ("app.providers.mistral", "MistralAdapter", "mistral-small-latest"),
 }

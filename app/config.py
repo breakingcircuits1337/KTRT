@@ -20,7 +20,7 @@ class Settings(BaseSettings):
     openai_api_key: str = Field(default="", alias="OPENAI_API_KEY")
     azure_openai_api_key: str = Field(default="", alias="AZURE_OPENAI_API_KEY")
     azure_openai_endpoint: str = Field(default="", alias="AZURE_OPENAI_ENDPOINT")
-    azure_openai_deployment: str = Field(default="gpt-4.1", alias="AZURE_OPENAI_DEPLOYMENT")
+    azure_openai_deployment: str = Field(default="gpt-5.4-pro", alias="AZURE_OPENAI_DEPLOYMENT")
     azure_openai_api_version: str = Field(
         default="2025-01-01-preview", alias="AZURE_OPENAI_API_VERSION"
     )
