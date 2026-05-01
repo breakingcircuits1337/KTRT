@@ -55,7 +55,6 @@ class Settings(BaseSettings):
 
     # ── Timeouts (seconds) ──────────────────────────────────
     search_timeout: int = 15
-    model_timeout: int = 45
     total_workflow_timeout: int = 180
 
 

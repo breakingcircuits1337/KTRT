@@ -48,7 +48,9 @@ class ArtifactOut(BaseModel):
 class SourceOut(BaseModel):
     title: str
     url: str
+    snippet: str | None = None
     published_at: str | None = None
+    source_type: str | None = None
     credibility: float | None = None
 
 

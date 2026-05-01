@@ -78,7 +78,9 @@ async def run_quest(request: QuestRequest) -> QuestResponse:
             SourceOut(
                 title=s.title,
                 url=s.url,
+                snippet=s.snippet,
                 published_at=s.published_at,
+                source_type=s.source_type,
                 credibility=s.credibility,
             )
             for s in final_state.sources

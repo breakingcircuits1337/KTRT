@@ -7,6 +7,9 @@ def route_after_judge(state: MerlinState) -> str:
     """Route after The Crown's decision."""
     decision = state.judge_decision
 
+    if decision is None:
+        return "finalize_node"
+
     if decision == "APPROVED":
         # Research mode doesn't need build/debug — skip straight to finalize
         if state.mode == "research":
@@ -30,6 +33,9 @@ def route_after_judge(state: MerlinState) -> str:
 def route_after_debug(state: MerlinState) -> str:
     """Route after Sir Bors' debug decision."""
     decision = state.debug_decision
+
+    if decision is None:
+        return "finalize_node"
 
     if decision == "SUCCESS":
         return "finalize_node"

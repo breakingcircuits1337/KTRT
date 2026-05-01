@@ -48,13 +48,22 @@ def _trace(state: MerlinState, node: str, model: str, tokens_in: int, tokens_out
 
 
 def _extract_json(text: str) -> dict:
-    """Extract first JSON object from text. Logs a debug warning on parse failure."""
-    match = re.search(r"\{.*\}", text, re.DOTALL)
-    if match:
-        try:
-            return json.loads(match.group())
-        except json.JSONDecodeError as exc:
-            logger.debug("JSON parse failed in LLM output", error=str(exc), snippet=text[:200])
+    """Extract first complete JSON object from LLM output using incremental decoding.
+
+    Unlike a greedy regex this correctly handles nested braces and stops at the
+    exact end of the first valid object rather than the last closing brace in the
+    text.
+    """
+    decoder = json.JSONDecoder()
+    for i, ch in enumerate(text):
+        if ch == "{":
+            try:
+                obj, _ = decoder.raw_decode(text, i)
+                if isinstance(obj, dict):
+                    return obj
+            except json.JSONDecodeError:
+                continue
+    logger.debug("No valid JSON object found in LLM output", snippet=text[:200])
     return {}
 
 

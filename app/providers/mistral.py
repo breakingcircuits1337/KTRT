@@ -34,8 +34,11 @@ class MistralAdapter(LLMAdapter):
                 ],
             )
         except Exception as exc:
+            code = getattr(exc, "status_code", None)
+            if isinstance(code, int) and (code == 429 or code >= 500):
+                raise TransientError(str(exc)) from exc
             err = str(exc).lower()
-            if "429" in err or "rate" in err or "503" in err or "500" in err:
+            if "rate" in err or "429" in err or "503" in err:
                 raise TransientError(str(exc)) from exc
             raise
 
