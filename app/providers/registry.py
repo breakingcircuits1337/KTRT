@@ -6,30 +6,40 @@ if TYPE_CHECKING:
     from app.providers.base import LLMAdapter
 
 # Default role → (module_path, class_name, model_name)
+# Azure AI Foundry is the primary provider. Other providers remain available via
+# per-request overrides using the model aliases below.
 _DEFAULTS: dict[str, tuple[str, str, str | None]] = {
-    "researcher": ("app.providers.mistral", "MistralAdapter", "mistral-large-latest"),
-    "evidence": ("app.providers.anthropic", "AnthropicAdapter", "claude-sonnet-4-6"),
-    "planner": ("app.providers.anthropic", "AnthropicAdapter", "claude-sonnet-4-6"),
-    "critic": ("app.providers.groq", "GroqAdapter", "llama-3.3-70b-versatile"),
-    "judge": ("app.providers.gemini", "GeminiAdapter", "gemini-2.0-flash"),
-    "builder": ("app.providers.anthropic", "AnthropicAdapter", "claude-sonnet-4-6"),
-    "debugger": ("app.providers.azure_openai", "AzureOpenAIAdapter", None),
+    # Fast research/retrieval — GPT-4o balances speed and quality
+    "researcher": ("app.providers.azure_openai", "AzureOpenAIAdapter", "gpt-4o"),
+    # Deep synthesis — GPT-4.1 flagship for highest-quality outputs
+    "evidence": ("app.providers.azure_openai", "AzureOpenAIAdapter", "gpt-4.1"),
+    "planner": ("app.providers.azure_openai", "AzureOpenAIAdapter", "gpt-4.1"),
+    # Critique pass — GPT-4o is fast enough and sharp enough for adversarial review
+    "critic": ("app.providers.azure_openai", "AzureOpenAIAdapter", "gpt-4o"),
+    # Final verdict — GPT-4.1 for authoritative evaluation
+    "judge": ("app.providers.azure_openai", "AzureOpenAIAdapter", "gpt-4.1"),
+    # Code generation — GPT-4.1 for best correctness
+    "builder": ("app.providers.azure_openai", "AzureOpenAIAdapter", "gpt-4.1"),
+    # Debugging — GPT-4.1 with strong code reasoning
+    "debugger": ("app.providers.azure_openai", "AzureOpenAIAdapter", "gpt-4.1"),
 }
 
 _MODEL_ALIASES: dict[str, tuple[str, str, str | None]] = {
-    # Anthropic
+    # ── Azure (primary) ──────────────────────────────────────────
+    "azure:gpt-4.1": ("app.providers.azure_openai", "AzureOpenAIAdapter", "gpt-4.1"),
+    "azure:gpt-4.1-mini": ("app.providers.azure_openai", "AzureOpenAIAdapter", "gpt-4.1-mini"),
+    "azure:gpt-4o": ("app.providers.azure_openai", "AzureOpenAIAdapter", "gpt-4o"),
+    "azure:gpt-4o-mini": ("app.providers.azure_openai", "AzureOpenAIAdapter", "gpt-4o-mini"),
+    # ── Anthropic (fallback / override) ──────────────────────────
     "claude-sonnet-4-6": ("app.providers.anthropic", "AnthropicAdapter", "claude-sonnet-4-6"),
     "claude-opus-4-6": ("app.providers.anthropic", "AnthropicAdapter", "claude-opus-4-6"),
     "claude-haiku-4-5": ("app.providers.anthropic", "AnthropicAdapter", "claude-haiku-4-5-20251001"),
-    # Azure
-    "azure:gpt-4.1": ("app.providers.azure_openai", "AzureOpenAIAdapter", "gpt-4.1"),
-    "azure:gpt-4o": ("app.providers.azure_openai", "AzureOpenAIAdapter", "gpt-4o"),
-    # Gemini
+    # ── Gemini (fallback / override) ─────────────────────────────
     "gemini-2.0-flash": ("app.providers.gemini", "GeminiAdapter", "gemini-2.0-flash"),
     "gemini-1.5-pro": ("app.providers.gemini", "GeminiAdapter", "gemini-1.5-pro"),
-    # Groq
+    # ── Groq (fallback / override) ───────────────────────────────
     "groq:llama-3.3-70b": ("app.providers.groq", "GroqAdapter", "llama-3.3-70b-versatile"),
-    # Mistral
+    # ── Mistral (fallback / override) ────────────────────────────
     "mistral-large-latest": ("app.providers.mistral", "MistralAdapter", "mistral-large-latest"),
     "mistral-small-latest": ("app.providers.mistral", "MistralAdapter", "mistral-small-latest"),
 }
