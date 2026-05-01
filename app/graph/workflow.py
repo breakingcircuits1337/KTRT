@@ -73,12 +73,11 @@ def build_graph():
     return graph.compile()
 
 
-# Module-level compiled graph (lazy init on first import)
-_graph = None
+# Compile once at import time — build_graph() is pure graph construction
+# (no I/O, no network), so this is safe and avoids a race condition when
+# multiple async workers call get_graph() concurrently before init completes.
+_graph = build_graph()
 
 
 def get_graph():
-    global _graph
-    if _graph is None:
-        _graph = build_graph()
     return _graph

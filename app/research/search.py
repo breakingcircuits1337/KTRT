@@ -77,7 +77,11 @@ async def exa_search(query: str, max_results: int = MAX_RESULTS) -> list[dict]:
 
 
 async def search(query: str, max_results: int = MAX_RESULTS) -> list[dict]:
-    """Try Tavily first, fall back to Exa."""
+    """Try Tavily first, fall back to Exa. Logs an error if all providers fail."""
+    if not settings.tavily_api_key and not settings.exa_api_key:
+        logger.error("No search provider configured — set TAVILY_API_KEY or EXA_API_KEY")
+        return []
+
     if settings.tavily_api_key:
         try:
             return await tavily_search(query, max_results)
@@ -90,4 +94,5 @@ async def search(query: str, max_results: int = MAX_RESULTS) -> list[dict]:
         except Exception as exc:
             logger.error("Exa search also failed", error=str(exc))
 
+    logger.error("All configured search providers failed — workflow will proceed without sources")
     return []

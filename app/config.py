@@ -20,9 +20,9 @@ class Settings(BaseSettings):
     openai_api_key: str = Field(default="", alias="OPENAI_API_KEY")
     azure_openai_api_key: str = Field(default="", alias="AZURE_OPENAI_API_KEY")
     azure_openai_endpoint: str = Field(default="", alias="AZURE_OPENAI_ENDPOINT")
-    azure_openai_deployment: str = Field(default="gpt-4.1", alias="AZURE_OPENAI_DEPLOYMENT")
+    azure_openai_deployment: str = Field(default="gpt-5.4-pro", alias="AZURE_OPENAI_DEPLOYMENT")
     azure_openai_api_version: str = Field(
-        default="2024-12-01-preview", alias="AZURE_OPENAI_API_VERSION"
+        default="2025-01-01-preview", alias="AZURE_OPENAI_API_VERSION"
     )
     google_api_key: str = Field(default="", alias="GOOGLE_API_KEY")
     groq_api_key: str = Field(default="", alias="GROQ_API_KEY")
@@ -55,7 +55,6 @@ class Settings(BaseSettings):
 
     # ── Timeouts (seconds) ──────────────────────────────────
     search_timeout: int = 15
-    model_timeout: int = 45
     total_workflow_timeout: int = 180
 
 

@@ -40,8 +40,13 @@ class GeminiAdapter(LLMAdapter):
         try:
             resp = await self._client.generate_content_async(prompt, generation_config=config)
         except Exception as exc:
+            # Prefer structured status code; fall back to string matching for SDKs
+            # that surface errors as plain exceptions without a status_code attribute.
+            code = getattr(exc, "status_code", None) or getattr(exc, "code", None)
+            if isinstance(code, int) and (code == 429 or code >= 500):
+                raise TransientError(str(exc)) from exc
             err = str(exc).lower()
-            if "quota" in err or "rate" in err or "503" in err or "500" in err:
+            if "quota" in err or "rate limit" in err or "resource exhausted" in err:
                 raise TransientError(str(exc)) from exc
             raise
 
