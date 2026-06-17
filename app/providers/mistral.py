@@ -3,6 +3,7 @@ from __future__ import annotations
 import time
 
 from mistralai import Mistral
+from mistralai.models import SDKError
 
 from app.config import settings
 from app.providers.base import LLMAdapter, ModelTrace
@@ -33,13 +34,11 @@ class MistralAdapter(LLMAdapter):
                     {"role": "user", "content": user},
                 ],
             )
+        except SDKError as exc:
+            if exc.status_code == 429 or exc.status_code >= 500:
+                raise TransientError(str(exc)) from exc
+            raise
         except Exception as exc:
-            code = getattr(exc, "status_code", None)
-            if isinstance(code, int) and (code == 429 or code >= 500):
-                raise TransientError(str(exc)) from exc
-            err = str(exc).lower()
-            if "rate" in err or "429" in err or "503" in err:
-                raise TransientError(str(exc)) from exc
             raise
 
         latency_ms = (time.monotonic() - start) * 1000

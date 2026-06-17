@@ -23,7 +23,7 @@ class QuestRequest(BaseModel):
         description="'research' returns a final answer; 'build' produces code artifacts.",
     )
     max_debate_rounds: int = Field(default=3, ge=1, le=5)
-    max_debug_rounds: int = Field(default=2, ge=0, le=5)
+    max_debug_rounds: int = Field(default=3, ge=0, le=5)
     include_sources: bool = Field(default=True)
     providers: ProviderMap = Field(default_factory=ProviderMap)
 

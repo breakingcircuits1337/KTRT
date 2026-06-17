@@ -230,7 +230,12 @@ async def debate_node(state: MerlinState) -> dict:
     ]
 
     if not critique_items:
-        # Fallback: treat full text as one medium critique
+        logger.warning(
+            "debate_node failed to parse structured critiques; falling back to raw text",
+            run_id=state.run_id,
+            round=state.debate_round,
+            raw_snippet=text[:200],
+        )
         critique_items = [CritiqueItem(issue=text[:500], severity="medium", recommendation="See full critique above.")]
 
     return {
