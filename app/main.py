@@ -24,6 +24,12 @@ async def lifespan(app: FastAPI):
             "Set KTRT_API_KEY in your environment before accepting traffic."
         )
 
+    if settings.cors_origins.strip() == "*":
+        logger.warning(
+            "CORS_ORIGINS is set to '*' — all origins are permitted. "
+            "Set CORS_ORIGINS to a comma-separated list of allowed origins before accepting production traffic."
+        )
+
     # Pre-compile the LangGraph workflow so first request is fast
     from app.graph.workflow import get_graph
     get_graph()
