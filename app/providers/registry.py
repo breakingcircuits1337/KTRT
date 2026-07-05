@@ -10,20 +10,22 @@ if TYPE_CHECKING:
 # configured in your Azure AI Foundry project. Other providers remain available
 # as per-request overrides via the model aliases below.
 _DEFAULTS: dict[str, tuple[str, str, str | None]] = {
-    # Fast factual retrieval — DeepSeek V3.2 is fast and strong at research synthesis
-    "researcher": ("app.providers.azure_openai", "AzureOpenAIAdapter", "deepseek-v3.2"),
-    # Evidence weighing — Kimi-K2 Thinking's extended reasoning excels here
-    "evidence": ("app.providers.azure_openai", "AzureOpenAIAdapter", "kimi-k2-thinking"),
-    # Strategic planning — GPT-5.4 Pro flagship for complex multi-step reasoning
-    "planner": ("app.providers.azure_openai", "AzureOpenAIAdapter", "gpt-5.4-pro"),
-    # Adversarial critique — DeepSeek V3.2-Speciale tuned for deep critical analysis
-    "critic": ("app.providers.azure_openai", "AzureOpenAIAdapter", "deepseek-v3.2-speciale"),
-    # Final verdict — GPT-5.4 Pro for authoritative evaluation
-    "judge": ("app.providers.azure_openai", "AzureOpenAIAdapter", "gpt-5.4-pro"),
-    # Code generation — GPT-5.1 Codex Max, purpose-built for code
-    "builder": ("app.providers.azure_openai", "AzureOpenAIAdapter", "gpt-5.1-codex-max"),
-    # Debugging — GPT-5.1 Codex Max, code-native model
-    "debugger": ("app.providers.azure_openai", "AzureOpenAIAdapter", "gpt-5.1-codex-max"),
+    # Deployment names below match the live Azure AI Foundry resource
+    # (brokencircuits-1334) validated against /openai/v1/chat/completions.
+    # Fast factual retrieval
+    "researcher": ("app.providers.azure_openai", "AzureOpenAIAdapter", "DeepSeek-V4-Pro"),
+    # Evidence weighing — Kimi's extended reasoning excels here
+    "evidence": ("app.providers.azure_openai", "AzureOpenAIAdapter", "Kimi-K2.6"),
+    # Strategic planning — GPT-5.5 flagship reasoning
+    "planner": ("app.providers.azure_openai", "AzureOpenAIAdapter", "gpt-5.5"),
+    # Adversarial critique — Mistral Large 3 (classic chat model)
+    "critic": ("app.providers.azure_openai", "AzureOpenAIAdapter", "Mistral-Large-3"),
+    # Final verdict — GPT-5.5 for authoritative evaluation
+    "judge": ("app.providers.azure_openai", "AzureOpenAIAdapter", "gpt-5.5"),
+    # Code generation — GPT-5.5 (gpt-5.3-codex is Responses-API only, unusable here)
+    "builder": ("app.providers.azure_openai", "AzureOpenAIAdapter", "gpt-5.5"),
+    # Debugging — GPT-5.5
+    "debugger": ("app.providers.azure_openai", "AzureOpenAIAdapter", "gpt-5.5"),
 }
 
 _MODEL_ALIASES: dict[str, tuple[str, str, str | None]] = {

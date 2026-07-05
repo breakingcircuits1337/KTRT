@@ -56,6 +56,11 @@ async def run_quest(request: QuestRequest) -> QuestResponse:
             debug_summary=DebugSummary(rounds=0),
         )
 
+    # LangGraph (>=1.x) returns the graph state as a plain dict even when the
+    # state schema is a pydantic model — rehydrate it so attribute access works.
+    if isinstance(final_state, dict):
+        final_state = MerlinState(**final_state)
+
     logger.info(
         "quest_complete",
         run_id=run_id,

@@ -20,14 +20,12 @@ dependencies = [
     "langchain-core>=0.2.0",
     "tenacity>=8.3.0",
     "python-dotenv>=1.0.0",
-    # provider SDKs
-    "anthropic>=0.28.0",
+    # provider SDKs — Azure-only deployment uses the OpenAI SDK. The optional
+    # anthropic/google/groq/mistral adapters are lazily imported only when their
+    # model aliases are requested; install those extras via the "providers" group
+    # if you enable them. Kept out of the base set to avoid httpx pin conflicts.
     "openai>=1.30.0",
-    "google-generativeai>=0.7.0",
-    "groq>=0.9.0",
-    "mistralai>=1.0.0",
     # research
-    "tavily-python>=0.3.0",
     "trafilatura>=1.9.0",
     # storage
     "redis[asyncio]>=5.0.0",
@@ -39,6 +37,13 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+providers = [
+    "anthropic>=0.28.0",
+    "google-generativeai>=0.7.0",
+    "groq>=0.9.0",
+    "mistralai>=1.0.0",
+    "tavily-python>=0.3.0",
+]
 dev = [
     "pytest>=8.2.0",
     "pytest-asyncio>=0.23.0",

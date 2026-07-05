@@ -19,8 +19,7 @@ services:
 
   redis:
     image: redis:7-alpine
-    ports:
-      - "6379:6379"
+    # Internal only — reachable to the api over the compose network, not the LAN.
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 5s
@@ -34,8 +33,7 @@ services:
       POSTGRES_USER: ktrt
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       POSTGRES_DB: ktrt
-    ports:
-      - "5432:5432"
+    # Internal only — reachable to the api over the compose network, not the LAN.
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:

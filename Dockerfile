@@ -1,34 +1,26 @@
 # ── Stage 1: build ───────────────────────────────────────────────────────────
-# Compile native extensions (trafilatura, lxml, cryptography) then discard
-# build toolchain so the final image stays small and has a reduced attack surface.
+# lxml, cryptography and trafilatura all ship self-contained manylinux wheels
+# for cp311, so no system compiler or -dev headers are needed. Avoiding apt
+# entirely also sidesteps slow/unreliable Debian mirror fetches.
 FROM python:3.11-slim AS builder
-
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    gcc \
-    libxml2-dev \
-    libxslt-dev \
-    && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /build
 COPY pyproject.toml .
 COPY app/ ./app/
 
-# Non-editable install into an isolated prefix so we can copy it cleanly
-RUN pip install --no-cache-dir --prefix=/install .
+# Prefer prebuilt wheels; install into an isolated prefix we can copy cleanly.
+# A BuildKit cache mount persists downloaded wheels across builds, and the long
+# timeout/retries tolerate a slow uplink.
+RUN --mount=type=cache,target=/root/.cache/pip \
+    pip install --prefer-binary --timeout 180 --retries 15 --prefix=/install .
 
 
 # ── Stage 2: runtime ─────────────────────────────────────────────────────────
 FROM python:3.11-slim
 
-# Only the shared libraries needed at runtime (no compilers)
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    libxml2 \
-    libxslt1.1 \
-    && rm -rf /var/lib/apt/lists/*
-
 WORKDIR /app
 
-# Copy installed packages from builder stage
+# Copy installed packages from builder stage (wheels bundle libxml2/libxslt).
 COPY --from=builder /install /usr/local
 # Copy application source
 COPY --from=builder /build/app ./app/

@@ -31,6 +31,7 @@ class Settings(BaseSettings):
     # ── Research ─────────────────────────────────────────────
     tavily_api_key: str = Field(default="", alias="TAVILY_API_KEY")
     exa_api_key: str = Field(default="", alias="EXA_API_KEY")
+    searxng_url: str = Field(default="", alias="SEARXNG_URL")
 
     # ── Storage ──────────────────────────────────────────────
     redis_url: str = Field(default="redis://localhost:6379/0", alias="REDIS_URL")
