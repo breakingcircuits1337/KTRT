@@ -186,20 +186,21 @@ function renderKnights(){
        <span><span class="who">${who}</span><br><span class="role">${role}</span></span></div>`);
   });
 }
-let timerId=null, stepId=null, t0=0;
+let timerId=null, t0=0;
 function startProgress(){
   renderKnights(); $("#progress").style.display="block"; $("#result").style.display="none";
   t0 = Date.now();
   timerId = setInterval(()=>{ $("#elapsed").textContent = Math.round((Date.now()-t0)/1000)+"s"; }, 500);
-  // Estimated cadence across the ~200s wait (cosmetic; API is not streaming).
-  let i=0; const dots=[...document.querySelectorAll(".knight")];
-  const advance=()=>{ if(i>0) dots[i-1].classList.replace("active","done");
-    if(i<dots.length){ dots[i].classList.add("active"); i++; } };
-  advance();
-  stepId = setInterval(advance, 24000);
 }
-function stopProgress(){ clearInterval(timerId); clearInterval(stepId);
+function stopProgress(){ clearInterval(timerId);
   document.querySelectorAll(".knight.active").forEach(k=>k.classList.replace("active","done")); }
+// Light the knight whose node just finished; mark the prior active one done.
+function markKnight(name){
+  const tiles=[...document.querySelectorAll(".knight")];
+  const idx = KNIGHTS.findIndex(k=>k[0]===name);
+  document.querySelectorAll(".knight.active").forEach(k=>{ if(k!==tiles[idx]) k.classList.replace("active","done"); });
+  if(idx>=0){ tiles[idx].classList.remove("done"); tiles[idx].classList.add("active"); }
+}
 
 // minimal, safe markdown → html
 function esc(s){ return s.replace(/[&<>]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;"}[c])); }
@@ -253,7 +254,7 @@ async function runQuest(){
   if(!query){ showErr("Enter a quest first."); return; }
   hideErr(); $("#begin").disabled=true; $("#form").style.opacity=".6"; startProgress();
   try{
-    const r = await fetch("/v1/quests",{
+    const r = await fetch("/v1/quests/stream",{
       method:"POST",
       headers:{"Content-Type":"application/json","X-API-Key":getKey()},
       body: JSON.stringify({
@@ -263,7 +264,28 @@ async function runQuest(){
       })
     });
     if(!r.ok){ const t=await r.text(); throw new Error("HTTP "+r.status+" — "+t.slice(0,300)); }
-    showResult(await r.json());
+    // Parse the Server-Sent Events stream.
+    const reader = r.body.getReader(); const dec = new TextDecoder();
+    let buf="", done=false;
+    while(!done){
+      const {value,done:d} = await reader.read(); done=d;
+      buf += dec.decode(value||new Uint8Array(), {stream:!d});
+      let sep;
+      while((sep=buf.indexOf("\n\n"))>=0){
+        const block = buf.slice(0,sep); buf = buf.slice(sep+2);
+        let ev="message", data="";
+        for(const line of block.split("\n")){
+          if(line.startsWith("event:")) ev=line.slice(6).trim();
+          else if(line.startsWith("data:")) data+=line.slice(5).trim();
+        }
+        if(!data) continue;
+        const payload = JSON.parse(data);
+        if(ev==="node") markKnight(payload.knight);
+        else if(ev==="result"){ showResult(payload); return; }
+        else if(ev==="error"){ throw new Error(payload.message||"stream error"); }
+      }
+    }
+    throw new Error("Stream ended without a result.");
   }catch(e){
     stopProgress(); $("#progress").style.display="none"; showErr(e.message||String(e));
   }finally{

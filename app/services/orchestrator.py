@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import json
 import time
+from typing import AsyncIterator
 
 from app.config import settings
 from app.graph.state import MerlinState
@@ -18,17 +20,26 @@ from app.utils.logging import get_logger
 
 logger = get_logger(__name__)
 
+# Graph node → (knight, role) for progress display.
+KNIGHT_BY_NODE: dict[str, tuple[str, str]] = {
+    "research_node": ("Sir Bedivere", "Researcher"),
+    "evidence_node": ("Sir Percival", "Evidence"),
+    "planner_node": ("Sir Lancelot", "Planner"),
+    "debate_node": ("The Round Table", "Debate"),
+    "judge_node": ("The Crown", "Judge"),
+    "builder_node": ("Sir Kay", "Builder"),
+    "debugger_node": ("Sir Bors", "Debugger"),
+    "debug_research_node": ("Sir Bedivere", "Targeted Research"),
+    "finalize_node": ("The Chronicle", "Finalizer"),
+}
 
-async def run_quest(request: QuestRequest) -> QuestResponse:
+
+def _prepare(request: QuestRequest) -> tuple[str, MerlinState]:
     run_id = make_run_id("quest")
     logger.info("quest_start", run_id=run_id, query=request.query[:100], mode=request.mode)
-
     providers = {
-        k: v
-        for k, v in request.providers.model_dump().items()
-        if v is not None
+        k: v for k, v in request.providers.model_dump().items() if v is not None
     }
-
     initial_state = MerlinState(
         run_id=run_id,
         query=request.query,
@@ -37,28 +48,12 @@ async def run_quest(request: QuestRequest) -> QuestResponse:
         max_debug_rounds=request.max_debug_rounds,
         providers=providers,
     )
+    return run_id, initial_state
 
-    graph = get_graph()
 
-    # Stream the graph with a wall-clock budget, keeping the latest state after
-    # every super-step. If the budget is exhausted before the workflow finishes
-    # (slow reasoning models can make each debate/revision cycle 1-2 minutes),
-    # stop after the current node and finalize gracefully with the best draft so
-    # far — rather than hard-cancelling and discarding all the work.
-    deadline = time.monotonic() + settings.total_workflow_timeout
-    last_state: dict = {}
-    timed_out = False
-    stream = graph.astream(initial_state, stream_mode="values")
-    try:
-        async for chunk in stream:
-            last_state = chunk
-            if time.monotonic() >= deadline:
-                timed_out = True
-                logger.error("quest_timeout", run_id=run_id)
-                break
-    finally:
-        await stream.aclose()
-
+def _build_response(
+    run_id: str, request: QuestRequest, last_state: dict, timed_out: bool
+) -> QuestResponse:
     if not last_state:
         return QuestResponse(
             run_id=run_id,
@@ -73,7 +68,6 @@ async def run_quest(request: QuestRequest) -> QuestResponse:
     # state schema is a pydantic model — rehydrate it so attribute access works.
     final_state = MerlinState(**last_state) if isinstance(last_state, dict) else last_state
 
-    # Resolve the answer/status, salvaging a partial draft on timeout.
     resolved_status = final_state.run_status
     resolved_answer = final_state.final_answer or final_state.draft_answer
     if timed_out and resolved_status not in ("complete", "blocked"):
@@ -101,8 +95,7 @@ async def run_quest(request: QuestRequest) -> QuestResponse:
     )
 
     key_critiques = [
-        f"[{c.severity.upper()}] {c.issue[:120]}"
-        for c in (final_state.critiques or [])
+        f"[{c.severity.upper()}] {c.issue[:120]}" for c in (final_state.critiques or [])
     ]
     debug_issues = []
     if final_state.debug_notes and final_state.debug_decision == "BLOCKED":
@@ -144,3 +137,68 @@ async def run_quest(request: QuestRequest) -> QuestResponse:
         sources=sources_out,
         model_trace=final_state.model_trace,
     )
+
+
+async def run_quest(request: QuestRequest) -> QuestResponse:
+    """Run a quest to completion (or the time budget) and return the result."""
+    run_id, initial_state = _prepare(request)
+    graph = get_graph()
+
+    deadline = time.monotonic() + settings.total_workflow_timeout
+    last_state: dict = {}
+    timed_out = False
+    stream = graph.astream(initial_state, stream_mode="values")
+    try:
+        async for chunk in stream:
+            last_state = chunk
+            if time.monotonic() >= deadline:
+                timed_out = True
+                logger.error("quest_timeout", run_id=run_id)
+                break
+    finally:
+        await stream.aclose()
+
+    return _build_response(run_id, request, last_state, timed_out)
+
+
+def _sse(event: str, data: dict) -> str:
+    return f"event: {event}\ndata: {json.dumps(data)}\n\n"
+
+
+async def run_quest_stream(request: QuestRequest) -> AsyncIterator[str]:
+    """Run a quest and stream Server-Sent Events: a `node` event as each knight
+    finishes, then a final `result` event carrying the full QuestResponse."""
+    run_id, initial_state = _prepare(request)
+    graph = get_graph()
+
+    deadline = time.monotonic() + settings.total_workflow_timeout
+    last_state: dict = {}
+    timed_out = False
+
+    yield _sse("start", {"run_id": run_id, "mode": request.mode})
+
+    # stream_mode as a list yields (mode, chunk) tuples: "updates" tells us which
+    # node just ran; "values" carries the full accumulated state.
+    stream = graph.astream(initial_state, stream_mode=["updates", "values"])
+    try:
+        async for mode, chunk in stream:
+            if mode == "updates":
+                for node_name in chunk:
+                    knight, role = KNIGHT_BY_NODE.get(node_name, (node_name, ""))
+                    yield _sse("node", {"node": node_name, "knight": knight, "role": role})
+            elif mode == "values":
+                last_state = chunk
+                if time.monotonic() >= deadline:
+                    timed_out = True
+                    logger.error("quest_timeout", run_id=run_id)
+                    yield _sse("timeout", {"run_id": run_id})
+                    break
+    except Exception as exc:  # surface failures to the client instead of hanging
+        logger.error("quest_stream_error", run_id=run_id, error=str(exc))
+        yield _sse("error", {"message": str(exc)[:300]})
+        return
+    finally:
+        await stream.aclose()
+
+    response = _build_response(run_id, request, last_state, timed_out)
+    yield _sse("result", response.model_dump(mode="json"))

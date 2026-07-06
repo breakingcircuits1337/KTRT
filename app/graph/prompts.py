@@ -64,13 +64,18 @@ Instructions:
 - Attack unsupported claims, weak reasoning, missing counterevidence.
 - Identify security risks, architecture flaws, temporal ambiguity, and maintainability issues.
 - Be precise: state the exact claim or section that is weak.
-- Return a structured critique list:
-  For each issue, provide:
-  - ISSUE: (what is wrong)
-  - SEVERITY: low | medium | high
-  - RECOMMENDATION: (how to fix it)
+- Only assign SEVERITY "high" to issues that materially break correctness,
+  reliability, or safety. Cosmetic or nice-to-have concerns are "low".
 
-Do not revise — only critique. Be thorough and unsparing.
+Return ONLY a JSON object in this exact shape, with no prose before or after:
+{
+  "critiques": [
+    {"issue": "what is wrong", "severity": "low|medium|high", "recommendation": "how to fix it"}
+  ]
+}
+If the plan is genuinely sound, return {"critiques": []}.
+
+Do not revise — only critique. Be thorough and unsparing, but honest about severity.
 """
 
 MODERATOR = """\
