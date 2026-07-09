@@ -1,0 +1,302 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>KTRT — The Round Table</title>
+<style>
+  :root {
+    --bg: #14110d;
+    --bg2: #1d1913;
+    --panel: #241f18;
+    --ink: #ece3d0;
+    --muted: #a99e86;
+    --gold: #c9a24b;
+    --gold-soft: #e6c878;
+    --crimson: #8f2d2d;
+    --line: #3a3227;
+    --ok: #6fa86b;
+    --warn: #c99a4b;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    background:
+      radial-gradient(1200px 600px at 50% -10%, #2a2318 0%, var(--bg) 55%),
+      var(--bg);
+    color: var(--ink);
+    font-family: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
+    line-height: 1.55;
+    min-height: 100vh;
+  }
+  .wrap { max-width: 920px; margin: 0 auto; padding: 32px 20px 80px; }
+  header.masthead { text-align: center; padding: 18px 0 8px; }
+  .crest { font-size: 34px; letter-spacing: .18em; color: var(--gold);
+    text-transform: uppercase; margin: 0; font-weight: 600;
+    text-shadow: 0 1px 0 #000; }
+  .crest small { display:block; font-size: 12px; letter-spacing:.35em;
+    color: var(--muted); margin-top: 6px; text-transform: uppercase; }
+  .rule { height:1px; background:linear-gradient(90deg,transparent,var(--gold),transparent);
+    margin: 18px auto; max-width: 520px; opacity:.6; }
+  .epigraph { text-align:center; color:var(--muted); font-style:italic;
+    font-size:14px; margin: 0 auto 26px; max-width: 560px; }
+
+  .panel { background: linear-gradient(180deg,var(--panel),var(--bg2));
+    border:1px solid var(--line); border-radius: 10px; padding: 22px;
+    box-shadow: 0 10px 30px rgba(0,0,0,.35), inset 0 1px 0 rgba(255,255,255,.03); }
+
+  label.fld { display:block; font-size:12px; letter-spacing:.18em;
+    text-transform:uppercase; color:var(--muted); margin: 0 0 8px; }
+  textarea, input[type=text] {
+    width:100%; background:#100d09; color:var(--ink); border:1px solid var(--line);
+    border-radius:8px; padding:12px 14px; font-family:inherit; font-size:16px; resize:vertical; }
+  textarea:focus, input:focus { outline:none; border-color:var(--gold); }
+  .controls { display:flex; flex-wrap:wrap; gap:18px; align-items:flex-end; margin-top:16px; }
+  .controls .grp { flex:1 1 auto; min-width:140px; }
+  select, .rounds { width:100%; background:#100d09; color:var(--ink);
+    border:1px solid var(--line); border-radius:8px; padding:11px 12px; font-family:inherit; font-size:15px; }
+  .actions { display:flex; justify-content:space-between; align-items:center; margin-top:22px; gap:14px; flex-wrap:wrap; }
+  button.begin {
+    background: linear-gradient(180deg,var(--gold-soft),var(--gold));
+    color:#241a06; border:none; border-radius:9px; padding:13px 26px;
+    font-family:inherit; font-weight:700; font-size:16px; letter-spacing:.04em;
+    cursor:pointer; box-shadow:0 6px 18px rgba(201,162,75,.25); }
+  button.begin:disabled { opacity:.5; cursor:not-allowed; }
+  button.ghost { background:transparent; color:var(--muted); border:1px solid var(--line);
+    border-radius:8px; padding:9px 14px; font-family:inherit; cursor:pointer; font-size:13px; }
+  .keyline { font-size:12px; color:var(--muted); }
+  .keyline b { color:var(--gold-soft); }
+
+  /* Quest progress */
+  #progress { display:none; margin-top:26px; }
+  .timer { text-align:center; font-size:13px; color:var(--muted); letter-spacing:.2em; text-transform:uppercase; }
+  .timer b { color:var(--gold-soft); font-size:16px; }
+  .knights { display:grid; grid-template-columns:repeat(auto-fill,minmax(200px,1fr)); gap:10px; margin-top:18px; }
+  .knight { display:flex; align-items:center; gap:10px; padding:10px 12px; border:1px solid var(--line);
+    border-radius:8px; background:#100d09; opacity:.45; transition:all .5s ease; }
+  .knight .dot { width:10px; height:10px; border-radius:50%; background:var(--line); flex:none; }
+  .knight .who { font-size:14px; }
+  .knight .role { font-size:11px; color:var(--muted); text-transform:uppercase; letter-spacing:.12em; }
+  .knight.active { opacity:1; border-color:var(--gold); box-shadow:0 0 0 1px rgba(201,162,75,.25); }
+  .knight.active .dot { background:var(--gold); box-shadow:0 0 8px var(--gold); animation:pulse 1.1s infinite; }
+  .knight.done { opacity:.85; }
+  .knight.done .dot { background:var(--ok); }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.3} }
+
+  /* Result */
+  #result { display:none; margin-top:26px; }
+  .verdict { display:flex; flex-wrap:wrap; gap:12px; margin-bottom:18px; }
+  .badge { border:1px solid var(--line); border-radius:999px; padding:6px 14px; font-size:13px;
+    color:var(--muted); background:#100d09; }
+  .badge b { color:var(--gold-soft); }
+  .badge.ok { border-color:var(--ok); } .badge.ok b { color:var(--ok); }
+  .badge.warn { border-color:var(--warn); } .badge.warn b { color:var(--warn); }
+  .answer { background:#f4ecd8; color:#2a2114; border-radius:10px; padding:26px 30px;
+    box-shadow:inset 0 0 60px rgba(120,90,30,.08); overflow-x:auto; }
+  .answer h1,.answer h2,.answer h3 { font-family:inherit; color:#4a3a12; margin:1.1em 0 .5em; line-height:1.25; }
+  .answer h1{font-size:24px} .answer h2{font-size:20px} .answer h3{font-size:17px}
+  .answer p { margin:.7em 0; } .answer ul,.answer ol { margin:.6em 0 .6em 1.2em; }
+  .answer code { background:#e4d8bd; padding:1px 6px; border-radius:4px; font-size:.9em; }
+  .answer pre { background:#241f18; color:#ece3d0; padding:14px; border-radius:8px; overflow-x:auto; }
+  .answer pre code { background:none; padding:0; }
+  .answer a { color:#7a5a1a; }
+  .sect-title { font-size:12px; letter-spacing:.22em; text-transform:uppercase; color:var(--gold);
+    margin:28px 0 12px; border-bottom:1px solid var(--line); padding-bottom:8px; }
+  .critique { font-size:14px; color:var(--ink); padding:8px 0; border-bottom:1px dashed var(--line); }
+  .source { display:block; padding:10px 12px; border:1px solid var(--line); border-radius:8px;
+    margin-bottom:8px; background:#100d09; text-decoration:none; color:var(--ink); }
+  .source:hover { border-color:var(--gold); }
+  .source .t { font-size:14px; color:var(--gold-soft); }
+  .source .u { font-size:12px; color:var(--muted); word-break:break-all; }
+  .err { color:#e8a3a3; background:#2a1717; border:1px solid var(--crimson); border-radius:8px;
+    padding:14px; margin-top:18px; display:none; }
+  footer { text-align:center; color:var(--muted); font-size:12px; margin-top:40px; font-style:italic; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="masthead">
+    <h1 class="crest">KTRT<small>Knights of the Round Table Research</small></h1>
+  </header>
+  <div class="rule"></div>
+  <p class="epigraph">“Speak your request, and we shall illuminate the path — whether an answer to your question, or the blueprint for an application.” — Merlin</p>
+
+  <div class="panel" id="form">
+    <label class="fld" for="query">Your Quest</label>
+    <textarea id="query" rows="3" placeholder="e.g. What are the trade-offs between event sourcing and CRUD at scale?"></textarea>
+    <div class="controls">
+      <div class="grp">
+        <label class="fld" for="mode">Mode</label>
+        <select id="mode">
+          <option value="research">Research — answer a question</option>
+          <option value="build">Build — draft an application</option>
+        </select>
+      </div>
+      <div class="grp">
+        <label class="fld" for="debate">Debate rounds</label>
+        <select id="debate" class="rounds">
+          <option>1</option><option selected>2</option><option>3</option><option>4</option><option>5</option>
+        </select>
+      </div>
+    </div>
+    <div class="actions">
+      <button class="begin" id="begin">⚔ Begin the Quest</button>
+      <span class="keyline">Table key: <b id="keystate">not set</b> · <button class="ghost" id="setkey">set key</button></span>
+    </div>
+    <div class="err" id="err"></div>
+  </div>
+
+  <div id="progress" class="panel">
+    <div class="timer">The Round Table convenes · <b id="elapsed">0s</b></div>
+    <div class="knights" id="knights"></div>
+  </div>
+
+  <div id="result">
+    <div class="verdict" id="verdict"></div>
+    <div class="answer" id="answer"></div>
+    <div id="critiques"></div>
+    <div id="sources"></div>
+    <div style="margin-top:24px"><button class="ghost" id="again">↻ New Quest</button></div>
+  </div>
+
+  <footer>The Round Table convenes. The quest begins.</footer>
+</div>
+
+<script>
+const KNIGHTS = [
+  ["Sir Bedivere","Researcher"], ["Sir Percival","Evidence"], ["Sir Lancelot","Planner"],
+  ["The Round Table","Debate"], ["The Crown","Judge"], ["Sir Kay","Builder"],
+  ["Sir Bors","Debugger"], ["The Chronicle","Finalizer"]
+];
+const $ = s => document.querySelector(s);
+const keyName = "ktrt_api_key";
+function getKey(){ return localStorage.getItem(keyName) || ""; }
+function refreshKey(){ $("#keystate").textContent = getKey() ? "set ✓" : "not set"; }
+$("#setkey").onclick = () => {
+  const k = prompt("Enter your KTRT API key (X-API-Key):", getKey());
+  if (k !== null) { localStorage.setItem(keyName, k.trim()); refreshKey(); }
+};
+refreshKey();
+
+function renderKnights(){
+  const c = $("#knights"); c.innerHTML = "";
+  KNIGHTS.forEach(([who,role],i)=>{
+    c.insertAdjacentHTML("beforeend",
+      `<div class="knight" data-i="${i}"><span class="dot"></span>
+       <span><span class="who">${who}</span><br><span class="role">${role}</span></span></div>`);
+  });
+}
+let timerId=null, t0=0;
+function startProgress(){
+  renderKnights(); $("#progress").style.display="block"; $("#result").style.display="none";
+  t0 = Date.now();
+  timerId = setInterval(()=>{ $("#elapsed").textContent = Math.round((Date.now()-t0)/1000)+"s"; }, 500);
+}
+function stopProgress(){ clearInterval(timerId);
+  document.querySelectorAll(".knight.active").forEach(k=>k.classList.replace("active","done")); }
+// Light the knight whose node just finished; mark the prior active one done.
+function markKnight(name){
+  const tiles=[...document.querySelectorAll(".knight")];
+  const idx = KNIGHTS.findIndex(k=>k[0]===name);
+  document.querySelectorAll(".knight.active").forEach(k=>{ if(k!==tiles[idx]) k.classList.replace("active","done"); });
+  if(idx>=0){ tiles[idx].classList.remove("done"); tiles[idx].classList.add("active"); }
+}
+
+// minimal, safe markdown → html
+function esc(s){ return s.replace(/[&<>]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;"}[c])); }
+function md(src){
+  const lines = esc(src).split("\n"); let out=[], inCode=false, inList=false;
+  const inline = t => t
+    .replace(/`([^`]+)`/g,"<code>$1</code>")
+    .replace(/\*\*([^*]+)\*\*/g,"<strong>$1</strong>")
+    .replace(/\[([^\]]+)\]\((https?:[^)]+)\)/g,'<a href="$2" target="_blank" rel="noopener">$1</a>');
+  for(let ln of lines){
+    if(ln.trim().startsWith("```")){ if(!inCode){out.push("<pre><code>");inCode=true;} else {out.push("</code></pre>");inCode=false;} continue; }
+    if(inCode){ out.push(ln+"\n"); continue; }
+    let m;
+    if(m=ln.match(/^(#{1,3})\s+(.*)/)){ if(inList){out.push("</ul>");inList=false;} out.push(`<h${m[1].length}>${inline(m[2])}</h${m[1].length}>`); continue; }
+    if(m=ln.match(/^\s*[-*]\s+(.*)/)){ if(!inList){out.push("<ul>");inList=true;} out.push(`<li>${inline(m[1])}</li>`); continue; }
+    if(inList){ out.push("</ul>"); inList=false; }
+    if(ln.trim()==="") out.push(""); else out.push(`<p>${inline(ln)}</p>`);
+  }
+  if(inList)out.push("</ul>"); if(inCode)out.push("</code></pre>");
+  return out.join("\n");
+}
+
+function showResult(d){
+  stopProgress(); $("#progress").style.display="none"; $("#result").style.display="block";
+  const conf = d.confidence!=null ? Math.round(d.confidence*100)+"%" : "—";
+  const jd = (d.debate_summary&&d.debate_summary.judge_decision)||"—";
+  const okClass = d.status==="complete" ? "ok" : "warn";
+  $("#verdict").innerHTML =
+    `<span class="badge ${okClass}">Status <b>${d.status}</b></span>
+     <span class="badge">Confidence <b>${conf}</b></span>
+     <span class="badge">Judge <b>${jd}</b></span>
+     <span class="badge">Debate rounds <b>${(d.debate_summary&&d.debate_summary.rounds)||0}</b></span>`;
+  $("#answer").innerHTML = md(d.final_answer||"(no answer returned)");
+  const crit = (d.debate_summary&&d.debate_summary.key_critiques)||[];
+  $("#critiques").innerHTML = crit.length
+    ? `<div class="sect-title">Critiques from the Table</div>`+crit.map(c=>`<div class="critique">${esc(c)}</div>`).join("")
+    : "";
+  const src = d.sources||[];
+  $("#sources").innerHTML = src.length
+    ? `<div class="sect-title">Sources (${src.length})</div>`+src.map(s=>
+        `<a class="source" href="${esc(s.url)}" target="_blank" rel="noopener">
+         <span class="t">${esc(s.title||s.url)}</span><br><span class="u">${esc(s.url)}</span></a>`).join("")
+    : `<div class="sect-title">Sources</div><div class="critique" style="color:var(--muted)">No sources were gathered for this quest.</div>`;
+  window.scrollTo({top:0,behavior:"smooth"});
+}
+
+async function runQuest(){
+  const key = getKey();
+  if(!key){ $("#setkey").click(); if(!getKey()) return; }
+  const query = $("#query").value.trim();
+  if(!query){ showErr("Enter a quest first."); return; }
+  hideErr(); $("#begin").disabled=true; $("#form").style.opacity=".6"; startProgress();
+  try{
+    const r = await fetch("/v1/quests/stream",{
+      method:"POST",
+      headers:{"Content-Type":"application/json","X-API-Key":getKey()},
+      body: JSON.stringify({
+        query, mode:$("#mode").value,
+        max_debate_rounds: parseInt($("#debate").value,10),
+        include_sources:true
+      })
+    });
+    if(!r.ok){ const t=await r.text(); throw new Error("HTTP "+r.status+" — "+t.slice(0,300)); }
+    // Parse the Server-Sent Events stream.
+    const reader = r.body.getReader(); const dec = new TextDecoder();
+    let buf="", done=false;
+    while(!done){
+      const {value,done:d} = await reader.read(); done=d;
+      buf += dec.decode(value||new Uint8Array(), {stream:!d});
+      let sep;
+      while((sep=buf.indexOf("\n\n"))>=0){
+        const block = buf.slice(0,sep); buf = buf.slice(sep+2);
+        let ev="message", data="";
+        for(const line of block.split("\n")){
+          if(line.startsWith("event:")) ev=line.slice(6).trim();
+          else if(line.startsWith("data:")) data+=line.slice(5).trim();
+        }
+        if(!data) continue;
+        const payload = JSON.parse(data);
+        if(ev==="node") markKnight(payload.knight);
+        else if(ev==="result"){ showResult(payload); return; }
+        else if(ev==="error"){ throw new Error(payload.message||"stream error"); }
+      }
+    }
+    throw new Error("Stream ended without a result.");
+  }catch(e){
+    stopProgress(); $("#progress").style.display="none"; showErr(e.message||String(e));
+  }finally{
+    $("#begin").disabled=false; $("#form").style.opacity="1";
+  }
+}
+function showErr(m){ const e=$("#err"); e.textContent=m; e.style.display="block"; }
+function hideErr(){ $("#err").style.display="none"; }
+$("#begin").onclick = runQuest;
+$("#again").onclick = ()=>{ $("#result").style.display="none"; $("#query").focus(); window.scrollTo({top:0,behavior:"smooth"}); };
+$("#query").addEventListener("keydown",e=>{ if((e.metaKey||e.ctrlKey)&&e.key==="Enter") runQuest(); });
+</script>
+</body>
+</html>

@@ -192,7 +192,7 @@ async def debate_node(state: MerlinState) -> dict:
         f"Query: {state.query}\n\n"
         f"Implementation Plan:\n{state.implementation_plan}\n\n"
         f"Evidence Report:\n{state.evidence_report}\n\n"
-        "Critique this plan aggressively. Return structured critique items."
+        "Critique this plan aggressively. Return the JSON critique object."
     )
 
     adapter = get_role_adapter("critic", state.providers.get("critic"))
@@ -202,36 +202,28 @@ async def debate_node(state: MerlinState) -> dict:
         temperature=0.3,
     )
 
-    # Parse critique items from structured output
-    critiques = []
-    current: dict = {}
-    for line in text.split("\n"):
-        line = line.strip()
-        if line.upper().startswith("- ISSUE:") or line.upper().startswith("ISSUE:"):
-            if current.get("issue"):
-                critiques.append(current)
-            current = {"issue": re.sub(r"^[-•]?\s*(ISSUE:)\s*", "", line, flags=re.IGNORECASE).strip()}
-        elif line.upper().startswith("SEVERITY:"):
-            raw = re.sub(r"SEVERITY:\s*", "", line, flags=re.IGNORECASE).strip().lower()
-            current["severity"] = raw if raw in ("low", "medium", "high") else "medium"
-        elif line.upper().startswith("RECOMMENDATION:"):
-            current["recommendation"] = re.sub(r"RECOMMENDATION:\s*", "", line, flags=re.IGNORECASE).strip()
-    if current.get("issue"):
-        critiques.append(current)
+    # Parse the JSON critique object: {"critiques": [{issue, severity, recommendation}]}
+    parsed = _extract_json(text)
+    raw_items = parsed.get("critiques", []) if isinstance(parsed, dict) else []
+
+    def _sev(v: object) -> str:
+        s = str(v).strip().lower()
+        return s if s in ("low", "medium", "high") else "medium"
 
     critique_items = [
         CritiqueItem(
-            issue=c.get("issue", ""),
-            severity=c.get("severity", "medium"),
-            recommendation=c.get("recommendation", ""),
+            issue=str(c.get("issue", "")).strip(),
+            severity=_sev(c.get("severity")),
+            recommendation=str(c.get("recommendation", "")).strip(),
         )
-        for c in critiques
-        if c.get("issue")
+        for c in raw_items
+        if isinstance(c, dict) and str(c.get("issue", "")).strip()
     ]
 
-    if not critique_items:
+    # An explicit empty JSON array means "the plan is sound" — not a parse failure.
+    if not critique_items and "critiques" not in (parsed or {}):
         logger.warning(
-            "debate_node failed to parse structured critiques; falling back to raw text",
+            "debate_node could not parse JSON critiques; falling back to raw text",
             run_id=state.run_id,
             round=state.debate_round,
             raw_snippet=text[:200],

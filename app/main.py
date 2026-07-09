@@ -1,9 +1,11 @@
 from __future__ import annotations
 
 from contextlib import asynccontextmanager
+from pathlib import Path
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse, RedirectResponse
 
 from app.api.routes_health import router as health_router
 from app.api.routes_quest import router as quest_router
@@ -70,3 +72,17 @@ app.add_middleware(
 app.include_router(health_router)
 app.include_router(quest_router)
 app.include_router(search_router)
+
+# ── Web console ──────────────────────────────────────────────────────────────
+_UI_FILE = Path(__file__).parent / "static" / "index.html"
+
+
+@app.get("/ui", include_in_schema=False)
+async def web_console() -> FileResponse:
+    """Serve the single-page Round Table console."""
+    return FileResponse(_UI_FILE, media_type="text/html")
+
+
+@app.get("/", include_in_schema=False)
+async def root_redirect() -> RedirectResponse:
+    return RedirectResponse(url="/ui")
